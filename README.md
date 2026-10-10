@@ -6,7 +6,7 @@
 
 <div align="justify">
 
-The library simplifies the creation of test projects for database-driver-specific functionality, such as driver plugins and custom wrappers around types used to pass data to databases.
+The library simplifies the creation of integration tests that require database access. It is particularly useful for testing database-driver-specific functionality, such as driver plugins.
 
 </div>
 
@@ -16,7 +16,7 @@ The library simplifies the creation of test projects for database-driver-specifi
 
 <div align="justify">
 
-A custom fixture should be created and provided through the `TestFixtureSource` attribute applied to the test class:
+Define a custom fixture that provides test runners and specify it using the `TestFixtureSource` attribute on the test class:
 
 </div>
 
@@ -29,7 +29,7 @@ internal static class PostgreSqlFixture
     {
         get
         {
-            yield return new TestFixtureData(new PostgreSqlRunner("postgres:14-alpine", "Init", null, (NpgsqlDataSourceBuilder builder) => builder.UseTvp()));
+            yield return new TestFixtureData(new PostgreSqlRunner("postgres:14-alpine", "Init", null, (NpgsqlDataSourceBuilder builder) => builder.UseTvp())); // Can be combined with SqlServerRunner.
         }
     }
 }
@@ -39,7 +39,7 @@ internal static class PostgreSqlFixture
 
 <div align="justify">
 
-The test class should inherit from `AbstractDbTests<TDbRunner>` and use the runner type provided by the fixture as its generic type parameter:
+The test class should inherit from `AbstractDbTests<TDbRunner>`, using the runner type provided by the fixture as the generic type argument:
 
 </div>
 
@@ -63,7 +63,7 @@ public sealed class InsertTests<TDbRunner>(TDbRunner runner) : AbstractDbTests<T
 
 <div align="justify">
 
-Test methods can then be implemented using standard `NUnit` assertion methods, along with a small set of `DbParameterAsserts` methods provided by the library.
+The `Runner` property, defined in the base class, provides access to the runner, which exposes `IDbCommand` and [DbDataSource](https://learn.microsoft.com/en-us/dotnet/api/system.data.common.dbdatasource?view=net-10.0). `IDbCommand` currently provides predefined methods for interacting with stored procedures only. These methods can be used to implement custom test logic. If they are insufficient, `DbDataSource` can be used to implement any required database-related functionality.
 
 </div>
 
