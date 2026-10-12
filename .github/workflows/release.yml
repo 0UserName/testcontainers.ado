@@ -2,70 +2,28 @@ name: Release
 
 
 on:
-  push:
-    tags: ["*.*.*"]
-
-
-  # Allows you to run this
-  # workflow manually from
-  # the Actions tab.
-  workflow_dispatch:
-
-
-    # Input variables.
-    inputs:
-      enable_integration_tests:
-        description: 'Enable integration tests (overrides repository variable)'
-        required: false
-        type: choice
-        options:
-          - ''
-          - 'true'
-          - 'false'
-        default: ''
-
-# Sets permissions of
-# the GITHUB_TOKEN to
-# allow deployment to
-# GPR.
-permissions:
-  packages: write
+  workflow_call:
 
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
 
     steps:
-      - name: Pull
-        uses: actions/checkout@v6
-
-
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.x
-          source-url: https://nuget.pkg.github.com/0UserName/index.json
+          dotnet-version: ${{ vars.CI_DOTNET_VERSIONS }}
+          source-url: ${{ vars.CI_NUGET_SOURCE_URL }}
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 
-      - name: Restore
-        run: dotnet restore
-
-
-      - name: Make
-        run: dotnet build --no-restore --configuration Release -p:GeneratePackageOnBuild=true -p:Version='${{ github.ref_name }}' -p:Authors='${{ github.repository_owner }}' -p:Description='${{ vars.PACKAGE_DESCRIPTION }}' -p:RepositoryUrl='${{ github.server_url }}/${{ github.repository }}' -p:RepositoryCommit='${{ github.sha }}'
-
-
-      - name: Run unit tests
-        run: dotnet test --filter "TestCategory!=Integration"
-
-
-      - name: Run integration tests
-        if: ${{ inputs.enable_integration_tests == '' && vars.ENABLE_INTEGRATION_TESTS == 'true' || inputs.enable_integration_tests == 'true' }}
-        run: dotnet test --filter "TestCategory=Integration"
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: "packages-${{ github.sha }}"
 
 
       - name: Push
