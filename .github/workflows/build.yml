@@ -1,0 +1,78 @@
+name: Build
+
+
+on:
+  workflow_call:
+
+    # Input variables
+    # from the parent
+    # workflow
+    inputs:
+      enable_integration_tests:
+        type: boolean
+        required: true
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Pull
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+
+      - name: Get latest tag
+        id: tag
+        shell: bash
+        run: echo "version=$(git tag --sort=-version:refname | head -n 1)" >> "$GITHUB_OUTPUT"
+
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ vars.CI_DOTNET_VERSIONS }}
+          source-url: ${{ vars.CI_NUGET_SOURCE_URL }}
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Restore
+        run: dotnet restore
+
+
+        # -p:GeneratePackageOnBuild=true:
+        #
+        # Build packages regardless of the enable_release variable from
+        # the parent workflow. This allows the entire build workflow to
+        # be tested independently
+
+        # -p:Version="${{ steps.tag.outputs.version }}":
+        #
+        # Always use the latest Git tag as the package version. Disable the
+        # release workflow for manual runs, but run it automatically when a
+        # tag is pushed
+      - name: Make
+        run: dotnet build --no-restore --configuration Release -p:GeneratePackageOnBuild=true -p:Version="${{ steps.tag.outputs.version }}" -p:Authors="${{ github.repository_owner }}" -p:Description="${{ vars.PACKAGE_DESCRIPTION }}" -p:RepositoryUrl="${{ github.server_url }}/${{ github.repository }}" -p:RepositoryCommit="${{ github.sha }}"
+
+
+      - name: Test [Unit]
+        run: dotnet test --logger "console;verbosity=normal" --filter "TestCategory!=Integration" -- NUnit.DisplayName=FullName
+
+
+      - name: Test [Integration]
+        if: ${{ inputs.enable_integration_tests }}
+        run: dotnet test --logger "console;verbosity=normal" --filter "TestCategory=Integration"  -- NUnit.DisplayName=FullName
+
+
+        # Allow manual artifact validation regardless
+        # of the enable_release setting in the parent
+        # workflow
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: "packages-${{ github.sha }}"
+          path: "**/*.nupkg"
