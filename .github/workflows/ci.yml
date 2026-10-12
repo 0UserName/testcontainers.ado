@@ -1,0 +1,47 @@
+name: CI
+
+
+on:
+  push:
+    tags: ["*.*.*"]
+
+  # Allows this workflow to be run manually from the Actions tab
+  workflow_dispatch:
+
+    # Input variables
+    inputs:
+      enable_integration_tests:
+        description: "Enable integration tests"
+        type: choice
+        options:
+          - "true"
+          - "false"
+        default: "true"
+
+
+      enable_release:
+        description: "Publish NuGet packages"
+        type: boolean
+        default: true
+
+
+# Sets permissions of
+# the GITHUB_TOKEN to
+# allow deployment to
+# GPR
+permissions:
+  contents: read
+  packages: write
+
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      enable_integration_tests: ${{ inputs.enable_integration_tests == 'true' || (!inputs.enable_integration_tests && vars.CI_ENABLE_INTEGRATION_TESTS == 'true') }}
+
+
+  release:
+    if: ${{ github.event_name == 'push' || inputs.enable_release }}
+    needs: build
+    uses: ./.github/workflows/release.yml
