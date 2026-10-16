@@ -60,12 +60,12 @@ jobs:
 
 
       - name: Test [Unit]
-        run: dotnet test --logger "console;verbosity=normal" --filter "TestCategory!=Integration" -- NUnit.DisplayName=FullName
+        run: dotnet test --logger "console;verbosity=normal" --settings .github/workflows/test.runsettings --filter "TestCategory!=Integration"
 
 
       - name: Test [Integration]
         if: ${{ inputs.enable_integration_tests }}
-        run: dotnet test --logger "console;verbosity=normal" --filter "TestCategory=Integration"  -- NUnit.DisplayName=FullName
+        run: dotnet test --logger "console;verbosity=normal" --settings .github/workflows/test.runsettings --filter "TestCategory=Integration"
 
 
         # Allow manual artifact validation regardless
